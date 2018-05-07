@@ -144,7 +144,8 @@ def rgb_to_cmyk(arr):
 
 def main():
     if len(sys.argv) == 6:
-        os.chdir(os.path.dirname(__file__))
+        script_path = os.path.dirname(os.path.realpath(__file__))
+        os.chdir(script_path)
         dirname = os.getcwd()
         dire = os.path.join(dirname, sys.argv[1])
         im = Image.open(dire)

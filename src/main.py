@@ -1,6 +1,7 @@
 import sys
 import os
 import numpy as np
+import re
 
 from PIL import Image
 from random import randint
@@ -8,7 +9,7 @@ from random import randint
 max_tree_depth = 0
 color_depth = 0
 variance_max = 0
-output = ''
+output = []
 
 class QNode:
     def __init__(self, isLeaf, parent):
@@ -64,64 +65,64 @@ def create_tree(arr, node, current_depth):
             if NW_var >= variance_max and current_depth < max_tree_depth:
                 if arrNW.shape[0] > 1 and arrNW.shape[1] > 1:
                     node.NW = QNode(False, node)
-                    output += "NW [\n"
+                    output.append("NW [")
                     create_tree(arrNW, node.NW, current_depth)
-                    output += "]\n"
+                    output.append("]")
                 else:
-                    output += "NW " + str(NW_avg_lvl) + '\n'
+                    output.append("NW " + str(NW_avg_lvl))
             else:
                 node.NW = QNode(True, node)
-                output += "NW " + str(NW_avg_lvl) + '\n'
+                output.append("NW " + str(NW_avg_lvl))
                 node.NW.lvl = NW_avg_lvl
 
             if NE_var >= variance_max and current_depth < max_tree_depth:
                 if arrNE.shape[0] > 1 and arrNE.shape[1] > 1:
                     node.NE = QNode(False, node)
-                    output += "NE [\n"
+                    output.append("NE [")
                     create_tree(arrNE, node.NE, current_depth)
-                    output += "]\n"
+                    output.append("]")
                 else:
-                    output += "NE " + str(NE_avg_lvl) + '\n'
+                    output.append("NE " + str(NE_avg_lvl))
             else:
                 node.NE = QNode(True, node)
-                output += "NE " + str(NE_avg_lvl) + '\n'
+                output.append("NE " + str(NE_avg_lvl))
                 node.NE.lvl = NE_avg_lvl
 
             if SE_var >= variance_max and current_depth < max_tree_depth:
                 if arrSE.shape[0] > 1 and arrSE.shape[1] > 1:
                     node.SE = QNode(False, node)
-                    output += "SE [\n"
+                    output.append("SE [")
                     create_tree(arrSE, node.SE, current_depth)
-                    output += "]\n"
+                    output.append("]")
                 else:
-                    output += "SE " + str(SE_avg_lvl) + '\n'
+                    output.append("SE " + str(SE_avg_lvl))
             else:
                 node.SE = QNode(True, node)
-                output += "SE " + str(SE_avg_lvl) + '\n'
+                output.append("SE " + str(SE_avg_lvl))
                 node.SE.lvl = SE_avg_lvl
 
             if SW_var >= variance_max and current_depth < max_tree_depth:
                 if arrSW.shape[0] > 1 and arrSW.shape[1] > 1:
                     node.SW = QNode(False, node)
-                    output += "SW [\n"
+                    output.append("SW [")
                     create_tree(arrSW, node.SW, current_depth)
-                    output += "]\n"
+                    output.append("]")
                 else:
-                    output += "SW " + str(SW_avg_lvl) + '\n'
+                    output.append("SW " + str(SW_avg_lvl))
             else:
                 node.SW = QNode(True, node)
-                output += "SW " + str(SW_avg_lvl) + '\n'
+                output.append("SW " + str(SW_avg_lvl))
                 node.SW.lvl = SW_avg_lvl
 
         else:
             node.isLeaf = True
             node.lvl = int(np.average(arr)*color_depth)
-            output += str(node.lvl) + '\n'
+            output.append(str(node.lvl))
 
     else:
         node.isLeaf = True
         node.lvl = int(np.average(arr) * color_depth)
-        output += str(node.lvl) + '\n'
+        output.append(str(node.lvl))
 
 def rgb_to_cmyk(arr):
     r = arr[0]
@@ -142,6 +143,104 @@ def rgb_to_cmyk(arr):
     return [c, m, y, k]
 
 
+def create_lists():
+    out_lst = []
+    aux = []
+    global color_depth
+    for i in range(1, color_depth):
+        # print(i)
+        del(aux[:])
+        # print(aux)
+        aux.append("Color Number: " + str(i))
+        # print(aux)
+        aux.append("----------")
+        # print(len(output))
+        for line in output:
+            # print(line)
+            if re.search("\[", re.escape(line)):
+                s = line
+                aux.append(s)
+            elif re.search("\]", line):
+                # if re.search("\[", re.escape(aux[-1])):
+                #     print(aux[-1], " Removing!")
+                #     aux.remove(aux[-1])
+                # else:
+                    aux.append(line)
+                    # print(aux[-1], "Added")
+            else:
+                x = [int(s) for s in line.split() if s.isdigit()]
+                x = x[0]
+                if x >= i:
+                    # print(x, "-", i)
+                    s = line.replace(str(x), "")
+                    aux.append(s)
+        tabs = 0
+        for j in range(0, len(aux)):
+            if re.search("\[", re.escape(aux[j])):
+                #print(tabs)
+                aux[j] = build_tabs(tabs) + aux[j]
+                tabs += 1
+            elif re.search("\]", re.escape(aux[j])):
+                tabs -= 1
+                aux[j] = build_tabs(tabs) + aux[j]
+            else:
+                aux[j] = build_tabs(tabs) + aux[j]
+        aux.append("----------")
+        # print(len(aux))
+        # print(i)
+        # print(aux[0])
+        # for line in aux:
+        #     file.write(line)
+        #     file.write("\n")
+        out_lst.append(aux.copy())
+
+    # print(np.shape(out_lst))
+    # print(out_lst)
+    #print(out_lst)
+    # for i in range(0, color_depth-1):
+    #     print(i)
+    #     for line in out_lst[i]:
+    #         file.write(line)
+    #         file.write("\n")
+    # file.close()
+    return out_lst
+
+def build_tabs(tabs):
+    s = ""
+    for i in range(0, tabs):
+        s += "  "
+    return s
+
+def remove_empty(lst):
+    for item in lst:
+        # print(len(item))
+        # print(item)
+        index_lst = []
+        changed = True
+        while changed:
+            index_lst = []
+            changed = False
+            for i in range(0, len(item)):
+                # print(i)
+                line = item[i]
+                if re.search("\]", line):
+                    before = item[i-1]
+                    if re.search("\[", before):
+                        # print("Removing: ", before, line)
+                        index_lst.append(i-1)
+                        index_lst.append(i)
+                        changed = True
+            # print("Indexes=" + str(len(index_lst)))
+            # print(sorted(index_lst, reverse=True))
+
+            for i in sorted(index_lst, reverse=True):
+                stri = str(len(item)) + " "
+                del item[i]
+                # print(stri + str(len(item)))
+
+    return lst
+
+
 def main():
     if len(sys.argv) == 6:
         script_path = os.path.dirname(os.path.realpath(__file__))
@@ -157,18 +256,23 @@ def main():
         global variance_max
         variance_max = float(sys.argv[4])
         global output
-        output = ''
+
         if sys.argv[5] in ["no", "n", "N", "0", "nope", "false", "False"]:
             img = img_arr[:, :, 0]
             img[0:img.shape[0], 0:img.shape[1]] = 255 - img[0:img.shape[0], 0:img.shape[1]]
             img = img/255
             root = QNode(False, None)
-
+            output = []
             create_tree(img, root, 0)
-
+            result = create_lists()
+            result = remove_empty(result)
             file_name = os.path.splitext(sys.argv[1])[0] + ".txt"
             file = open(file_name, "w")
-            file.write(output)
+            file.write("-------------\nQuad for GRAYSCALE\n-------------\n")
+            for item in result:
+                for line in item:
+                    file.write(line)
+                    file.write("\n")
             file.close()
 
         else:
@@ -178,36 +282,60 @@ def main():
             img_y = img_cmyk[:, :, 2]
             img_k = img_cmyk[:, :, 3]
 
-            output = ""
+            output = []
             root_c = QNode(False, None)
             create_tree(img_c, root_c, 0)
+            result = create_lists()
+            result = remove_empty(result)
             file_name = os.path.splitext(sys.argv[1])[0] + "_c.txt"
             file = open(file_name, "w")
-            file.write(output)
+            file.write("-------------\nQuad for color channel CYAN\n-------------\n")
+            for item in result:
+                for line in item:
+                    file.write(line)
+                    file.write("\n")
             file.close()
 
-            output = ""
+            output = []
             root_m = QNode(False, None)
             create_tree(img_m, root_m, 0)
+            result = create_lists()
+            result = remove_empty(result)
             file_name = os.path.splitext(sys.argv[1])[0] + "_m.txt"
             file = open(file_name, "w")
-            file.write(output)
+            file.write("-------------\nQuad for color channel MAGENTA\n-------------\n")
+            for item in result:
+                for line in item:
+                    file.write(line)
+                    file.write("\n")
             file.close()
 
-            output = ""
+            output = []
             root_y = QNode(False, None)
             create_tree(img_y, root_y, 0)
+            result = create_lists()
+            result = remove_empty(result)
             file_name = os.path.splitext(sys.argv[1])[0] + "_y.txt"
             file = open(file_name, "w")
-            file.write(output)
+            file.write("-------------\nQuad for color channel YELLOW\n-------------\n")
+            for item in result:
+                for line in item:
+                    file.write(line)
+                    file.write("\n")
             file.close()
 
-            output = ""
+            output = []
             root_k = QNode(False, None)
             create_tree(img_k, root_k, 0)
+            result = create_lists()
+            result = remove_empty(result)
             file_name = os.path.splitext(sys.argv[1])[0] + "_k.txt"
             file = open(file_name, "w")
-            file.write(output)
+            file.write("-------------\nQuad for color channel KEY/BLACK\n-------------\n")
+            for item in result:
+                for line in item:
+                    file.write(line)
+                    file.write("\n")
             file.close()
 
 

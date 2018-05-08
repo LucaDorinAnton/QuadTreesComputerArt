@@ -10,6 +10,7 @@ max_tree_depth = 0
 color_depth = 0
 variance_max = 0
 output = []
+variance_file = ''
 
 class QNode:
     def __init__(self, isLeaf, parent):
@@ -27,6 +28,7 @@ def create_tree(arr, node, current_depth):
     global color_depth
     global max_tree_depth
     global output
+    global variance_file
     height = arr.shape[0]
     width = arr.shape[1]
     if width > height:
@@ -57,8 +59,7 @@ def create_tree(arr, node, current_depth):
         # print(arrNE)
         NE_avg_lvl = int(np.average(arrNE) * color_depth)
         NE_var = np.var(arrNE)
-        if randint(0, 100) == 99:
-            print(str(NW_var) + " - " + str(NE_var) + " - " + str(SE_var) + " - " + str(SW_var))
+        variance_file.write(str(NW_var) + " - " + str(NE_var) + " - " + str(SE_var) + " - " + str(SW_var) + "\n")
         if current_depth < max_tree_depth:
             current_depth += 1
 
@@ -256,6 +257,8 @@ def main():
         global variance_max
         variance_max = float(sys.argv[4])
         global output
+        global variance_file
+        variance_file = open("variance.txt", "w")
 
         if sys.argv[5] in ["no", "n", "N", "0", "nope", "false", "False"]:
             img = img_arr[:, :, 0]
@@ -337,6 +340,7 @@ def main():
                     file.write(line)
                     file.write("\n")
             file.close()
+        variance_file.close()
 
 
     else:

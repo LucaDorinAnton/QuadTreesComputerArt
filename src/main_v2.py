@@ -383,7 +383,6 @@ def main():
             img_arr = np.apply_along_axis(cmyk_to_grayscale, 2, img_arr)
             root = QNode(None)
             create_tree(img_arr, root, 0, 0, 0, width1, height1, "All: ")
-            # print(np.shape(output))
             result = create_lists(output[3])
             images = []
             draws = []

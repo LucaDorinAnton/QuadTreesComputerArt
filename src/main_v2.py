@@ -15,6 +15,9 @@ output = []
 variance_file = ''
 count = 0
 mode = "COLOR"
+var_mode = "DIRECT"
+line_mode = True
+var_lst = []
 
 # QNode represents a node in the QuadTree
 # each QNode has 4 children
@@ -49,15 +52,16 @@ class QNode:
 
 def create_tree(arr, node, current_depth, x1, y1, x2, y2, direction):
 
-    global color_depth, max_tree_depth, output, variance_file, variance_max
+    global color_depth, max_tree_depth, output, variance_file, variance_max, var_lst
     curr = arr[y1:y2, x1:x2]
-    c = np.average(curr[:,:, 0])
+    c = np.average(curr[:, :, 0])
     m = np.average(curr[:, :, 1])
     y = np.average(curr[:, :, 2])
     k = np.average(curr[:, :, 3])
     color_lvl = [c, m, y, k]
-    curr_variance = np.var(curr)
+    curr_variance = get_variance(curr)
     variance_file.write(str(curr_variance) + "\n")
+    var_lst.append(curr_variance)
     if x2 - x1 >= 2 and y2 - y1 >= 2 and current_depth <= max_tree_depth:
         if curr_variance >= variance_max:
             current_depth += 1
@@ -96,6 +100,9 @@ def create_tree(arr, node, current_depth, x1, y1, x2, y2, direction):
                 output[i].append("]")
 
         else:
+            for i in range(0, 4):
+                color_lvl[i] = int(round(color_lvl[i] * color_depth))
+                color_lvl[i] = color_lvl[i]/color_depth
             c_int = int(color_lvl[0]*color_depth)
             m_int = int(color_lvl[1]*color_depth)
             y_int = int(color_lvl[2]*color_depth)
@@ -106,6 +113,9 @@ def create_tree(arr, node, current_depth, x1, y1, x2, y2, direction):
             output[3].append(direction + str(k_int))
             node.set_leaf(color_lvl, x1, y1, x2, y2)
     else:
+        for i in range(0, 4):
+            color_lvl[i] = int(round(color_lvl[i] * color_depth))
+            color_lvl[i] = color_lvl[i] / color_depth
         c_int = int(color_lvl[0] * color_depth)
         m_int = int(color_lvl[1] * color_depth)
         y_int = int(color_lvl[2] * color_depth)
@@ -115,6 +125,19 @@ def create_tree(arr, node, current_depth, x1, y1, x2, y2, direction):
         output[2].append(direction + str(y_int))
         output[3].append(direction + str(k_int))
         node.set_leaf(color_lvl, x1, y1, x2, y2)
+
+
+def get_variance(arr):
+    global var_mode
+    if var_mode == "DIRECT":
+        return np.var(arr)
+    elif var_mode == "AVERAGE":
+        c = np.var(arr[:, :, 0])
+        m = np.var(arr[:, :, 1])
+        y = np.var(arr[:, :, 2])
+        k = np.var(arr[:, :, 3])
+        return np.average([c, m, y, k])
+
 
 # By using the output from the create_tree function
 # Generate the text lists for each color
@@ -193,25 +216,95 @@ def remove_empty(lst):
 # Go through the Quadtree and reconstruct the image
 
 
-def parse_tree(node, draw):
-    global count, mode
+def parse_tree(node, draw, lvl):
+    global count, mode, line_mode, color_depth
     if not node.is_leaf:
-        parse_tree(node.NW, draw)
-        parse_tree(node.SW, draw)
-        parse_tree(node.SE, draw)
-        parse_tree(node.NE, draw)
+        parse_tree(node.NW, draw, lvl)
+        parse_tree(node.SW, draw, lvl)
+        parse_tree(node.SE, draw, lvl)
+        parse_tree(node.NE, draw, lvl)
     else:
         if mode == "COLOR":
-            pixel = cmyk_to_rgb(node.color_lvl)
+            channel_lvl_c = int(round(node.color_lvl[0] * color_depth))
+            if color_depth - channel_lvl_c >= lvl:
+                channel_lvl_c = color_depth - lvl
+            channel_lvl_c = channel_lvl_c / color_depth
+
+            channel_lvl_m = int(round(node.color_lvl[1] * color_depth))
+            if color_depth - channel_lvl_m >= lvl:
+                channel_lvl_m = color_depth - lvl
+            channel_lvl_m = channel_lvl_m / color_depth
+
+            channel_lvl_y = int(round(node.color_lvl[2] * color_depth))
+            if color_depth - channel_lvl_y >= lvl:
+                channel_lvl_y = color_depth - lvl
+            channel_lvl_y = channel_lvl_y / color_depth
+
+            channel_lvl_k = int(round(node.color_lvl[3] * color_depth))
+            if color_depth - channel_lvl_k >= lvl:
+                channel_lvl_k = color_depth - lvl
+            channel_lvl_k = channel_lvl_k / color_depth
+
+            cmyk_normalized = (channel_lvl_c, channel_lvl_m, channel_lvl_y, channel_lvl_k)
+            c_normalized = (channel_lvl_c, 0, 0, 0)
+            m_normalized = (0, channel_lvl_m, 0, 0)
+            y_normalized = (0, 0, channel_lvl_y, 0)
+            k_normalized = (0, 0, 0, channel_lvl_k)
+            rgb_pixel = cmyk_to_rgb(cmyk_normalized)
+
+            pixel_c = cmyk_to_rgb(c_normalized)
+            pixel_m = cmyk_to_rgb(m_normalized)
+            pixel_y = cmyk_to_rgb(y_normalized)
+            pixel_k = cmyk_to_rgb(k_normalized)
+            if line_mode:
+                draw[0].rectangle((node.x1, node.y1, node.x2, node.y2), fill=pixel_c, outline=(0, 0, 0))
+                draw[1].rectangle((node.x1, node.y1, node.x2, node.y2), fill=pixel_m, outline=(0, 0, 0))
+                draw[2].rectangle((node.x1, node.y1, node.x2, node.y2), fill=pixel_y, outline=(0, 0, 0))
+                draw[3].rectangle((node.x1, node.y1, node.x2, node.y2), fill=pixel_k, outline=(0, 0, 0))
+                draw[4].rectangle((node.x1, node.y1, node.x2, node.y2), fill=rgb_pixel, outline=(0, 0, 0))
+            else:
+                draw[0].rectangle((node.x1, node.y1, node.x2, node.y2), fill=pixel_c)
+                draw[1].rectangle((node.x1, node.y1, node.x2, node.y2), fill=pixel_m)
+                draw[2].rectangle((node.x1, node.y1, node.x2, node.y2), fill=pixel_y)
+                draw[3].rectangle((node.x1, node.y1, node.x2, node.y2), fill=pixel_k)
+                draw[4].rectangle((node.x1, node.y1, node.x2, node.y2), fill=rgb_pixel)
+
         else:
-            gray = int(node.color_lvl[3]*255)
+            # gray = int(round(node.color_lvl[3]*255))
+            # pixel = (gray, gray, gray)
+            # if line_mode:
+            #     draws[0].rectangle((node.x1, node.y1, node.x2, node.y2), fill=pixel, outline=(0, 0, 0))
+            # else:
+            #     draws[0].rectangle((node.x1, node.y1, node.x2, node.y2), fill=pixel)
+
+            gray_lvl = int(round(node.color_lvl[3]*color_depth))
+            # print(no_of_images)
+            if color_depth - gray_lvl >= lvl:
+                gray_lvl = color_depth - lvl
+            gray = int(round(gray_lvl/color_depth*255))
             pixel = (gray, gray, gray)
-
-        draw.rectangle((node.x1, node.y1, node.x2, node.y2), fill=pixel, outline=(0, 0, 0))
-
+            if line_mode:
+                draw.rectangle((node.x1, node.y1, node.x2, node.y2), fill=pixel, outline=(0, 0, 0))
+            else:
+                draw.rectangle((node.x1, node.y1, node.x2, node.y2), fill=pixel)
         count += 1
 
-# Various conversion helepr functions
+
+def create_images(root, draws):
+    global color_depth
+
+    for i in range(1, color_depth + 1):
+        parse_tree(root, draws[i - 1], i)
+
+# Various conversion helper functions
+
+
+def cmyk_to_byte(x):
+    c = int(round(255 * x[0]))
+    m = int(round(255 * x[1]))
+    y = int(round(255 * x[2]))
+    k = int(round(255 * x[3]))
+    return  c, m, y, k
 
 
 def cmyk_to_rgb(x):
@@ -220,17 +313,17 @@ def cmyk_to_rgb(x):
     m = x[1]
     y = x[2]
     k = x[3]
-    r = int(255 * (1 - c))
-    g = int(255 * (1 - m))
-    b = int(255 * (1 - y))
+    r = int(round(255 * (1 - c)))
+    g = int(round(255 * (1 - m)))
+    b = int(round(255 * (1 - y)))
     return r, g, b
 
 
 def cmyk_to_grayscale(x):
-    c = x[0]
-    m = x[1]
-    y = x[2]
-    k = x[3]
+    c = x[0] / 255
+    m = x[1] / 255
+    y = x[2] / 255
+    k = x[3] / 255
     c = c * (1 - k) + k
     m = m * (1 - k) + k
     y = y * (1 - k) + k
@@ -241,15 +334,17 @@ def cmyk_to_grayscale(x):
 
 
 def rgb_to_grayscale(x):
-    r = int(x[0])
-    g = int(x[1])
-    b = int(x[2])
+    r = int(round(x[0]))
+    g = int(round(x[1]))
+    b = int(round(x[2]))
     mean = int((r + b + g)/3)
     return np.array([mean, mean, mean, mean])
 
 
 def main():
-    global color_depth, max_tree_depth, variance_max, output, variance_file, width1, height1, mode
+    global color_depth, max_tree_depth, variance_max, output
+    global variance_file, width1, height1, mode, var_mode
+    global line_mode, var_lst
 
     script_path = os.path.dirname(os.path.realpath(__file__))
     os.chdir(script_path)
@@ -262,35 +357,50 @@ def main():
         os.makedirs(text_dir)
     variance_file = open("variance.txt", "w")
 
-    if len(sys.argv) == 6:
+    if len(sys.argv) == 8:
 
         img_file = sys.argv[1]
-        color_depth = int(sys.argv[2])
+        color_depth = int(sys.argv[2]) - 1
         max_tree_depth = int(sys.argv[3])
         variance_max = float(sys.argv[4])
+        if sys.argv[6] in ["no", "n", "N", "0", "nope", "false", "False"]:
+            var_mode = "DIRECT"
+        else:
+            var_mode = "AVERAGE"
+        if sys.argv[7] in ["no", "n", "N", "0", "nope", "false", "False"]:
+            line_mode = False
+        else:
+            line_mode = True
         dire = os.path.join(script_path, img_file)
         im = Image.open(dire)
         im = im.convert("CMYK")
         img_arr = np.array(im)
-        img_arr = img_arr / 255 * color_depth
-        img_arr = img_arr.astype(int)
-        img_arr = img_arr / color_depth
+        # img_arr = img_arr / 255 * color_depth
+        # img_arr = img_arr.astype(int)
+        # img_arr = img_arr / color_depth
         width1, height1 = im.size
         output = [[], [], [], []]
 
         if sys.argv[5] in ["no", "n", "N", "0", "nope", "false", "False"]:
             mode = "GRAYSCALE"
             img_arr = np.apply_along_axis(cmyk_to_grayscale, 2, img_arr)
-
             root = QNode(None)
             create_tree(img_arr, root, 0, 0, 0, width1, height1, "All: ")
+            # print(np.shape(output))
             result = create_lists(output[3])
-            image2 = Image.new("RGB", (width1, height1))
-            draw = ImageDraw.Draw(image2)
-            parse_tree(root, draw)
-            path = os.path.splitext(img_file)[0] + "_grayscale_quad.jpg"
+            images = []
+            draws = []
+            for i in range(0, color_depth):
+                image2 = Image.new("RGB", (width1, height1), (255, 255, 255))
+                draw = ImageDraw.Draw(image2)
+                images.append(image2)
+                draws.append(draw)
+            create_images(root, draws)
+            path = os.path.splitext(img_file)[0] + "_grayscale_quad_"
             os.chdir(img_dir)
-            image2.save(path, options="w")
+            for i in range(0, color_depth):
+                curr_path = path + str(i + 1) + ".jpg"
+                images[i].save(curr_path, options="w")
 
             file_name = os.path.splitext(img_file)[0] + "_grayscale_quad.txt"
             os.chdir(text_dir)
@@ -305,44 +415,38 @@ def main():
         else:
             mode = "COLOR"
             root = QNode(None)
+            img_arr = img_arr / 255
             create_tree(img_arr, root, 0, 0, 0, width1, height1, "All: ")
-            image2 = Image.new("RGB", (width1, height1))
-            draw = ImageDraw.Draw(image2)
-            parse_tree(root, draw)
             img_path = os.path.splitext(img_file)[0]
-            path_color = img_path + "_color_quad.jpg"
-            path_c = img_path + "_c_quad.jpg"
-            path_m = img_path + "_m_quad.jpg"
-            path_y = img_path + "_y_quad.jpg"
-            path_k = img_path + "_k_quad.jpg"
+            path_color = "_color_quad.jpg"
+            path_c = "_c_quad.jpg"
+            path_m = "_m_quad.jpg"
+            path_y = "_y_quad.jpg"
+            path_k = "_k_quad.jpg"
+            path_lst = [path_c, path_m, path_y, path_k, path_color]
+            suffix_lst = []
+            for i in range(1, color_depth + 1):
+                suffix_lst.append("-" + str(i))
             os.chdir(img_dir)
-            image2.save(path_color, options="w")
-            image2 = image2.convert("CMYK")
-            img_cmyk = np.array(image2)
-            img_c = img_cmyk[:, :, 0]
-            im_c = Image.new("CMYK", (width1, height1))
-            for i in range(0, height1):
-                for j in range(0, width1):
-                    im_c.putpixel((j, i), (img_c[i, j], 0, 0, 0))
-            im_c.save(path_c, options="w")
-            img_m = img_cmyk[:, :, 1]
-            im_m = Image.new("CMYK", (width1, height1))
-            for i in range(0, height1):
-                for j in range(0, width1):
-                    im_m.putpixel((j, i), (0, img_m[i, j], 0, 0))
-            im_m.save(path_m, options="w")
-            img_y = img_cmyk[:, :, 2]
-            im_y = Image.new("CMYK", (width1, height1))
-            for i in range(0, height1):
-                for j in range(0, width1):
-                    im_y.putpixel((j, i), (0, 0, img_y[i, j], 0))
-            im_y.save(path_y, options="w")
-            img_k = img_cmyk[:, :, 3]
-            im_k = Image.new("CMYK", (width1, height1))
-            for i in range(0, height1):
-                for j in range(0, width1):
-                    im_k.putpixel((j, i), (0, 0, 0, img_k[i, j]))
-            im_k.save(path_k, options="w")
+            images = []
+            draws = []
+            for i in range(0, color_depth):
+                img_lst = []
+                draw_lst = []
+                for j in range(0, 5):
+                    curr_img = Image.new("RGB", (width1, height1), (0, 0, 0, 1))
+                    img_lst.append(curr_img)
+                    curr_draw = ImageDraw.Draw(curr_img, mode="RGB")
+                    draw_lst.append(curr_draw)
+                images.append(img_lst)
+                draws.append(draw_lst)
+
+            create_images(root, draws)
+            img_file_short = os.path.splitext(img_file)[0]
+            for i in range(0, color_depth):
+                for j in range(0, 5):
+                    save_path = img_file_short + suffix_lst[i] + path_lst[j]
+                    images[i][j].save(save_path, options="w")
 
             path_c = img_path + "_c_quad.txt"
             path_m = img_path + "_m_quad.txt"
@@ -386,7 +490,12 @@ def main():
                     file.write(line)
                     file.write("\n")
             file.close()
-
+        avg_variance = np.average(var_lst)
+        min_variance = np.min(var_lst)
+        max_variance = np.max(var_lst)
+        variance_file.write("Minimum variance: " + str(min_variance) + "\n")
+        variance_file.write("Average variance: " + str(avg_variance) + "\n")
+        variance_file.write("Maximum variance: " + str(max_variance) + "\n")
         variance_file.close()
 
     else:

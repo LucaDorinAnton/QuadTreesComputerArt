@@ -375,9 +375,6 @@ def main():
         im = Image.open(dire)
         im = im.convert("CMYK")
         img_arr = np.array(im)
-        # img_arr = img_arr / 255 * color_depth
-        # img_arr = img_arr.astype(int)
-        # img_arr = img_arr / color_depth
         width1, height1 = im.size
         output = [[], [], [], []]
 

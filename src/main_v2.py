@@ -150,7 +150,7 @@ def create_lists(lst):
     if re.search("All", lst[0]):
         return [["Incompatible parameters. Please change parameters for a better result"]]
     else:
-        for i in range(1, color_depth):
+        for i in range(1, color_depth + 1):
             del(aux[:])
             aux.append("Color Number: " + str(i))
             aux.append("----------")

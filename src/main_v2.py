@@ -75,38 +75,26 @@ def create_tree(arr, node, current_depth, x1, y1, x2, y2, direction):
             node.NE = NE
             node.SE = SE
             node.SW = SW
-            for i in range(0, 4):
-                output[i].append("NW [")
+            if direction != "All: ":
+                for i in range(0, 4):
+                    output[i].append(direction + " [")
             create_tree(arr, NW, current_depth, x1, y1, avg_x, avg_y, "NW ")
-            for i in range(0, 4):
-                output[i].append("]")
-
-            for i in range(0, 4):
-                output[i].append("NE [")
-            create_tree(arr, NE, current_depth, x1, avg_y, avg_x, y2, "NE ")
-            for i in range(0, 4):
-                output[i].append("]")
-
-            for i in range(0, 4):
-                output[i].append("SE [")
+            create_tree(arr, NE, current_depth, avg_x, y1, x2, avg_y, "NE ")
             create_tree(arr, SE, current_depth, avg_x, avg_y, x2, y2, "SE ")
-            for i in range(0, 4):
-                output[i].append("]")
+            create_tree(arr, SW, current_depth, x1, avg_y, avg_x, y2, "SW ")
 
-            for i in range(0, 4):
-                output[i].append("SW [")
-            create_tree(arr, SW, current_depth, avg_x, y1, x2, avg_y, "SW ")
-            for i in range(0, 4):
-                output[i].append("]")
+            if direction != "All: ":
+                for i in range(0, 4):
+                    output[i].append("]")
 
         else:
             for i in range(0, 4):
                 color_lvl[i] = int(round(color_lvl[i] * color_depth))
                 color_lvl[i] = color_lvl[i]/color_depth
-            c_int = int(color_lvl[0]*color_depth)
-            m_int = int(color_lvl[1]*color_depth)
-            y_int = int(color_lvl[2]*color_depth)
-            k_int = int(color_lvl[3]*color_depth)
+            c_int = color_depth - int(color_lvl[0]*color_depth)
+            m_int = color_depth - int(color_lvl[1]*color_depth)
+            y_int = color_depth - int(color_lvl[2]*color_depth)
+            k_int = color_depth - int(color_lvl[3]*color_depth)
             output[0].append(direction + str(c_int))
             output[1].append(direction + str(m_int))
             output[2].append(direction + str(y_int))
@@ -116,10 +104,10 @@ def create_tree(arr, node, current_depth, x1, y1, x2, y2, direction):
         for i in range(0, 4):
             color_lvl[i] = int(round(color_lvl[i] * color_depth))
             color_lvl[i] = color_lvl[i] / color_depth
-        c_int = int(color_lvl[0] * color_depth)
-        m_int = int(color_lvl[1] * color_depth)
-        y_int = int(color_lvl[2] * color_depth)
-        k_int = int(color_lvl[3] * color_depth)
+        c_int = color_depth - int(color_lvl[0] * color_depth)
+        m_int = color_depth - int(color_lvl[1] * color_depth)
+        y_int = color_depth - int(color_lvl[2] * color_depth)
+        k_int = color_depth - int(color_lvl[3] * color_depth)
         output[0].append(direction + str(c_int))
         output[1].append(direction + str(m_int))
         output[2].append(direction + str(y_int))
@@ -144,6 +132,8 @@ def get_variance(arr):
 
 
 def create_lists(lst):
+    for line in lst:
+        print(line)
     out_lst = []
     aux = []
     global color_depth
@@ -163,6 +153,7 @@ def create_lists(lst):
                 else:
                     x = [int(s) for s in line.split() if s.isdigit()]
                     x = x[0]
+                    print(x)
                     if x >= i:
                         s = line.replace(str(x), "")
                         aux.append(s)
@@ -384,6 +375,7 @@ def main():
             root = QNode(None)
             create_tree(img_arr, root, 0, 0, 0, width1, height1, "All: ")
             result = create_lists(output[3])
+            remove_empty(result)
             images = []
             draws = []
             for i in range(0, color_depth):
@@ -449,10 +441,10 @@ def main():
             path_y = img_path + "_y_quad.txt"
             path_k = img_path + "_k_quad.txt"
 
-            result_c = create_lists(output[0])
-            result_m = create_lists(output[1])
-            result_y = create_lists(output[2])
-            result_k = create_lists(output[3])
+            result_c = remove_empty(create_lists(output[0]))
+            result_m = remove_empty(create_lists(output[1]))
+            result_y = remove_empty(create_lists(output[2]))
+            result_k = remove_empty(create_lists(output[3]))
             os.chdir(text_dir)
 
             file = open(path_c, "w")
